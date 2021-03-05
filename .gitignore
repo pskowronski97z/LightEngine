@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.ico
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -86,6 +87,9 @@ StyleCopReport.xml
 *.tmp_proj
 *_wpftmp.csproj
 *.log
+*.vcxproj
+*.filters
+*.user
 *.vspscc
 *.vssscc
 .builds
