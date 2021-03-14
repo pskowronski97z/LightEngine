@@ -2,9 +2,15 @@
 #include <LECore.h>
 #include <LEException.h>
 
+const D3D11_INPUT_ELEMENT_DESC LightEngine::Vertex3::vertex_desc_[3] = {
+	{"VT3_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA},
+	{"VT3_COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA},
+	{"VT3_NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA}
+};
+
 
 LightEngine::Core::Core(HWND window_handle_) {
-
+	
 	const D3D_FEATURE_LEVEL feature_level = D3D_FEATURE_LEVEL_11_1;
 	DXGI_SWAP_CHAIN_DESC swap_chain_desc;
 
@@ -27,7 +33,7 @@ LightEngine::Core::Core(HWND window_handle_) {
 	swap_chain_desc.Flags = 0;
 
 
-	HRESULT hr = D3D11CreateDeviceAndSwapChain(
+	call_result_ = D3D11CreateDeviceAndSwapChain(
 	nullptr, 
 	D3D_DRIVER_TYPE_HARDWARE,
 	nullptr,
@@ -36,46 +42,40 @@ LightEngine::Core::Core(HWND window_handle_) {
 	1,
 	D3D11_SDK_VERSION,
 	&swap_chain_desc,
-	&swap_chain_ptr_,
-	&device_ptr_,
+	swap_chain_ptr_.GetAddressOf(),
+	device_ptr_.GetAddressOf(),
 	nullptr,
-	&context_ptr_);
-	
-	if(FAILED(hr))
-		throw LECoreException("<D3D11 ERROR> <Device and swap chain creation failed> ","LECore.cpp",__LINE__,hr);
-	
-	ID3D11Resource *back_buffer = nullptr;
-	hr = swap_chain_ptr_->GetBuffer(0, __uuidof(ID3D11Resource), reinterpret_cast<void**>(&back_buffer));
+	context_ptr_.GetAddressOf());
 
-	if(FAILED(hr))
-		throw LECoreException("<D3D11 ERROR> <Cannot obtain an access to the back buffer> ","LECore.cpp",__LINE__,hr);
-	
-	hr = device_ptr_->CreateRenderTargetView(back_buffer, nullptr, &render_target_ptr_);
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Device and swap chain creation failed> ", "LECore.cpp",__LINE__, call_result_);
 
-	if(FAILED(hr))
-		throw LECoreException("<D3D11 ERROR> <Render target creation failed> ","LECore.cpp",__LINE__,hr);
-	
-	back_buffer->Release();
-}
+	Microsoft::WRL::ComPtr<ID3D11Resource> back_buffer;
 
-LightEngine::Core::~Core() {
+	call_result_ = swap_chain_ptr_->GetBuffer(0, __uuidof(ID3D11Resource), &back_buffer);
 
-	if (device_ptr_ != nullptr)
-		device_ptr_->Release();
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Cannot obtain an access to the back buffer> ", "LECore.cpp",__LINE__, call_result_);
 
-	if (context_ptr_ != nullptr)
-		context_ptr_->Release();
+	call_result_ = device_ptr_->CreateRenderTargetView(back_buffer.Get(), nullptr, render_target_ptr_.GetAddressOf());
 
-	if (swap_chain_ptr_ != nullptr)
-		swap_chain_ptr_->Release();
-
-	if(device_ptr_ != nullptr)
-		device_ptr_->Release();
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Render target creation failed> ", "LECore.cpp",__LINE__, call_result_);
 }
 
 void LightEngine::Core::clear_back_buffer(float r, float g, float b, float a) const {
 	const float clear_color[]{r, g, b, a};
-	context_ptr_->ClearRenderTargetView(render_target_ptr_,clear_color);
+	context_ptr_->ClearRenderTargetView(render_target_ptr_.Get(), clear_color);
 }
 
-void LightEngine::Core::present_frame() const noexcept { swap_chain_ptr_->Present(1u, 0u); }
+void LightEngine::Core::present_frame() {
+	call_result_ = swap_chain_ptr_->Present(1u, 0u);
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Frame rendering failed> ", "LECore.cpp",__LINE__, call_result_);
+}
+
+void LightEngine::Core::clear_back_buffer(float clear_color[4]) const {
+	context_ptr_->ClearRenderTargetView(render_target_ptr_.Get(), clear_color);
+}
+
