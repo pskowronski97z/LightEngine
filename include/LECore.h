@@ -6,7 +6,7 @@
 
 namespace LightEngine {
 
-	struct Vertex3 {
+	struct __declspec(dllexport) Vertex3 {
 		DirectX::XMFLOAT3 position_;
 		DirectX::XMFLOAT4 color_;
 		DirectX::XMFLOAT3 normal_;
@@ -20,6 +20,9 @@ namespace LightEngine {
 		Microsoft::WRL::ComPtr<ID3D11Device> device_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> render_target_ptr_;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader> vertex_shader_;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader> pixel_shader_;
+		Microsoft::WRL::ComPtr<ID3DBlob> compiled_shader;
 		HRESULT call_result_;
 	public:
 		Core(HWND window_handle_);
@@ -28,6 +31,8 @@ namespace LightEngine {
 		void clear_back_buffer(float r, float g, float b, float a) const;
 		void clear_back_buffer(float clear_color[4]) const;
 		void present_frame();
+		void set_up_vertex_buffer(Vertex3 *vertex_buffer, int buffer_size);
+		void draw();
 	};
 
 }

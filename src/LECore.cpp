@@ -1,6 +1,7 @@
 #include <iostream>
 #include <LECore.h>
 #include <LEException.h>
+#include <d3dcompiler.h>
 
 const D3D11_INPUT_ELEMENT_DESC LightEngine::Vertex3::vertex_desc_[3] = {
 	{"VT3_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA},
@@ -61,6 +62,42 @@ LightEngine::Core::Core(HWND window_handle_) {
 
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Render target creation failed> ", "LECore.cpp",__LINE__, call_result_);
+
+	// Loading shaders
+	//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	
+	call_result_ = D3DReadFileToBlob(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\PixelShader.cso",&compiled_shader);
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Cannot load compiled pixel shader> ", "LECore.cpp",__LINE__, call_result_);
+
+	call_result_ = device_ptr_->CreatePixelShader(
+		compiled_shader->GetBufferPointer(),
+		compiled_shader->GetBufferSize(),
+		nullptr,
+		pixel_shader_.GetAddressOf());
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Pixel shader initialization fail> ", "LECore.cpp",__LINE__, call_result_);
+
+	//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	call_result_ = D3DReadFileToBlob(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\VertexShader.cso",&compiled_shader);
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Cannot load compiled vertex shader> ", "LECore.cpp",__LINE__, call_result_);
+
+	call_result_ = device_ptr_->CreateVertexShader(
+		compiled_shader->GetBufferPointer(),
+		compiled_shader->GetBufferSize(),
+		nullptr,
+		vertex_shader_.GetAddressOf());
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Vertex shader initialization fail> ", "LECore.cpp",__LINE__, call_result_);
+
+	
 }
 
 void LightEngine::Core::clear_back_buffer(float r, float g, float b, float a) const {
@@ -73,6 +110,59 @@ void LightEngine::Core::present_frame() {
 
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Frame rendering failed> ", "LECore.cpp",__LINE__, call_result_);
+}
+
+void LightEngine::Core::set_up_vertex_buffer(Vertex3 *vertex_buffer, int buffer_size) {
+
+	D3D11_BUFFER_DESC buffer_desc;
+	D3D11_SUBRESOURCE_DATA sr_data;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
+	
+	buffer_desc.ByteWidth = sizeof(Vertex3)*buffer_size;
+	buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
+	buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	buffer_desc.CPUAccessFlags = 0;
+	buffer_desc.MiscFlags = 0;
+	buffer_desc.StructureByteStride = sizeof(Vertex3);
+
+	sr_data.pSysMem = vertex_buffer;
+	
+	call_result_ = device_ptr_->CreateBuffer(&buffer_desc,&sr_data,buffer.GetAddressOf());
+
+	if(FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Vertex buffer creation failed> ", "LECore.cpp",__LINE__, call_result_);
+
+	UINT stride = sizeof(Vertex3);
+	UINT offset = 0;
+
+	context_ptr_->IASetVertexBuffers(0, 1, buffer.GetAddressOf(), &stride, &offset);
+
+	context_ptr_->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	context_ptr_->VSSetShader(vertex_shader_.Get(),nullptr,0);
+	context_ptr_->PSSetShader(pixel_shader_.Get(),nullptr,0);
+
+	context_ptr_->OMSetRenderTargets(1,render_target_ptr_.GetAddressOf(),nullptr);
+	
+	D3D11_VIEWPORT vport{0,0,800,600,0,1};
+
+	context_ptr_->RSSetViewports(1,&vport);
+
+	Microsoft::WRL::ComPtr<ID3D11InputLayout> input_layout;
+
+	device_ptr_->CreateInputLayout(
+		Vertex3::vertex_desc_,
+		3,
+		compiled_shader->GetBufferPointer(),
+		compiled_shader->GetBufferSize(),
+		&input_layout);
+
+	context_ptr_->IASetInputLayout(input_layout.Get());
+	
+}
+
+void LightEngine::Core::draw()
+{
+	context_ptr_->Draw(3,0);
 }
 
 void LightEngine::Core::clear_back_buffer(float clear_color[4]) const {
