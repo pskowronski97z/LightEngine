@@ -64,40 +64,12 @@ LightEngine::Core::Core(HWND window_handle_) {
 		throw LECoreException("<D3D11 ERROR> <Render target creation failed> ", "LECore.cpp",__LINE__, call_result_);
 
 	// Loading shaders
-	//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-	
-	
-	call_result_ = D3DReadFileToBlob(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\PixelShader.cso",&compiled_shader);
 
-	if (FAILED(call_result_))
-		throw LECoreException("<D3D11 ERROR> <Cannot load compiled pixel shader> ", "LECore.cpp",__LINE__, call_result_);
+	load_pixel_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\PixelShader.cso");
+	load_pixel_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\PixelShader1.cso");
+	load_vertex_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\VertexShader.cso");
+	load_vertex_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\VertexShader1.cso");
 
-	call_result_ = device_ptr_->CreatePixelShader(
-		compiled_shader->GetBufferPointer(),
-		compiled_shader->GetBufferSize(),
-		nullptr,
-		pixel_shader_.GetAddressOf());
-
-	if (FAILED(call_result_))
-		throw LECoreException("<D3D11 ERROR> <Pixel shader initialization fail> ", "LECore.cpp",__LINE__, call_result_);
-
-	//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-	
-	call_result_ = D3DReadFileToBlob(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\VertexShader.cso",&compiled_shader);
-
-	if (FAILED(call_result_))
-		throw LECoreException("<D3D11 ERROR> <Cannot load compiled vertex shader> ", "LECore.cpp",__LINE__, call_result_);
-
-	call_result_ = device_ptr_->CreateVertexShader(
-		compiled_shader->GetBufferPointer(),
-		compiled_shader->GetBufferSize(),
-		nullptr,
-		vertex_shader_.GetAddressOf());
-
-	if (FAILED(call_result_))
-		throw LECoreException("<D3D11 ERROR> <Vertex shader initialization fail> ", "LECore.cpp",__LINE__, call_result_);
-
-	
 }
 
 void LightEngine::Core::clear_back_buffer(float r, float g, float b, float a) const {
@@ -138,31 +110,80 @@ void LightEngine::Core::set_up_vertex_buffer(Vertex3 *vertex_buffer, int buffer_
 	context_ptr_->IASetVertexBuffers(0, 1, buffer.GetAddressOf(), &stride, &offset);
 
 	context_ptr_->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	context_ptr_->VSSetShader(vertex_shader_.Get(),nullptr,0);
-	context_ptr_->PSSetShader(pixel_shader_.Get(),nullptr,0);
+	context_ptr_->VSSetShader(vertex_shader_ptrs_[1].Get(),nullptr,0);
+	context_ptr_->PSSetShader(pixel_shader_ptrs_[0].Get(),nullptr,0);
 
 	context_ptr_->OMSetRenderTargets(1,render_target_ptr_.GetAddressOf(),nullptr);
 	
-	D3D11_VIEWPORT vport{0,0,800,600,0,1};
+	D3D11_VIEWPORT vport[] {
+		{0,0,800,600,0,1}
+	};
 
-	context_ptr_->RSSetViewports(1,&vport);
-
-	Microsoft::WRL::ComPtr<ID3D11InputLayout> input_layout;
-
-	device_ptr_->CreateInputLayout(
-		Vertex3::vertex_desc_,
-		3,
-		compiled_shader->GetBufferPointer(),
-		compiled_shader->GetBufferSize(),
-		&input_layout);
-
-	context_ptr_->IASetInputLayout(input_layout.Get());
 	
+	context_ptr_->RSSetViewports(1,vport);
+
+	context_ptr_->IASetInputLayout(input_layout_ptrs_.at(0).Get());
 }
 
 void LightEngine::Core::draw()
 {
 	context_ptr_->Draw(3,0);
+}
+
+void LightEngine::Core::load_vertex_shader(std::wstring path) {
+	
+	c_vertex_shader_ptrs_.emplace_back(Microsoft::WRL::ComPtr<ID3DBlob>());
+	int end_index = c_vertex_shader_ptrs_.size()-1;
+	
+	call_result_ = D3DReadFileToBlob(path.c_str(), &c_vertex_shader_ptrs_.at(end_index));
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Cannot load compiled vertex shader> ", "LECore.cpp",__LINE__, call_result_);
+
+	vertex_shader_ptrs_.emplace_back(Microsoft::WRL::ComPtr<ID3D11VertexShader>());
+	
+	call_result_ = device_ptr_->CreateVertexShader(
+		c_vertex_shader_ptrs_.at(end_index)->GetBufferPointer(),
+		c_vertex_shader_ptrs_.at(end_index)->GetBufferSize(),
+		nullptr,
+		&vertex_shader_ptrs_[end_index]);
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Vertex shader initialization fail> ", "LECore.cpp",__LINE__, call_result_);
+
+	input_layout_ptrs_.emplace_back(Microsoft::WRL::ComPtr<ID3D11InputLayout>());
+	
+	call_result_ = device_ptr_->CreateInputLayout(
+		Vertex3::vertex_desc_,
+		3,
+		c_vertex_shader_ptrs_.at(end_index)->GetBufferPointer(),
+		c_vertex_shader_ptrs_.at(end_index)->GetBufferSize(),
+		&input_layout_ptrs_.at(end_index));
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Input layout initialization fail> ", "LECore.cpp",__LINE__, call_result_);
+}
+
+void LightEngine::Core::load_pixel_shader(std::wstring path) {
+
+	pixel_shader_ptrs_.emplace_back(Microsoft::WRL::ComPtr<ID3D11PixelShader>());
+	int end_index = pixel_shader_ptrs_.size()-1;
+
+	Microsoft::WRL::ComPtr<ID3DBlob> c_pixel_shader;
+	call_result_ = D3DReadFileToBlob(path.c_str(), &c_pixel_shader);
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Cannot load compiled pixel shader> ", "LECore.cpp",__LINE__, call_result_);
+
+	call_result_ = device_ptr_->CreatePixelShader(
+		c_pixel_shader->GetBufferPointer(),
+		c_pixel_shader->GetBufferSize(),
+		nullptr,
+		&pixel_shader_ptrs_.at(end_index));
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Pixel shader initialization fail> ", "LECore.cpp",__LINE__, call_result_);
+
 }
 
 void LightEngine::Core::clear_back_buffer(float clear_color[4]) const {

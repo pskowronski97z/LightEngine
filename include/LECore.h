@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <DirectXMath.h>
+#include <vector>
 
 namespace LightEngine {
 
@@ -20,10 +21,14 @@ namespace LightEngine {
 		Microsoft::WRL::ComPtr<ID3D11Device> device_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> render_target_ptr_;
-		Microsoft::WRL::ComPtr<ID3D11VertexShader> vertex_shader_;
-		Microsoft::WRL::ComPtr<ID3D11PixelShader> pixel_shader_;
-		Microsoft::WRL::ComPtr<ID3DBlob> compiled_shader;
+		
+		std::vector<Microsoft::WRL::ComPtr<ID3D11VertexShader>> vertex_shader_ptrs_;
+		std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> c_vertex_shader_ptrs_;
+		std::vector<Microsoft::WRL::ComPtr<ID3D11InputLayout>> input_layout_ptrs_;
+		std::vector<Microsoft::WRL::ComPtr<ID3D11PixelShader>> pixel_shader_ptrs_;
+		
 		HRESULT call_result_;
+		
 	public:
 		Core(HWND window_handle_);
 		Core(const Core&) = delete;	// deleting copy constructor (optional)
@@ -33,6 +38,8 @@ namespace LightEngine {
 		void present_frame();
 		void set_up_vertex_buffer(Vertex3 *vertex_buffer, int buffer_size);
 		void draw();
+		void load_vertex_shader(std::wstring path);
+		void load_pixel_shader(std::wstring path);
 	};
 
 }
