@@ -10,7 +10,7 @@ const D3D11_INPUT_ELEMENT_DESC LightEngine::Vertex3::vertex_desc_[3] = {
 };
 
 
-LightEngine::Core::Core(HWND window_handle_) {
+LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_height) {
 	
 	const D3D_FEATURE_LEVEL feature_level = D3D_FEATURE_LEVEL_11_1;
 	DXGI_SWAP_CHAIN_DESC swap_chain_desc;
@@ -33,7 +33,8 @@ LightEngine::Core::Core(HWND window_handle_) {
 	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 	swap_chain_desc.Flags = 0;
 
-
+	// Creating swap chain
+	
 	call_result_ = D3D11CreateDeviceAndSwapChain(
 	nullptr, 
 	D3D_DRIVER_TYPE_HARDWARE,
@@ -51,6 +52,10 @@ LightEngine::Core::Core(HWND window_handle_) {
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Device and swap chain creation failed> ", "LECore.cpp",__LINE__, call_result_);
 
+
+	
+	// Getting back buffer from swap chain
+	
 	Microsoft::WRL::ComPtr<ID3D11Resource> back_buffer;
 
 	call_result_ = swap_chain_ptr_->GetBuffer(0, __uuidof(ID3D11Resource), &back_buffer);
@@ -58,17 +63,35 @@ LightEngine::Core::Core(HWND window_handle_) {
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Cannot obtain an access to the back buffer> ", "LECore.cpp",__LINE__, call_result_);
 
+
+	
+	// Using back buffer to create render target to bind to the output-merger
+	
 	call_result_ = device_ptr_->CreateRenderTargetView(back_buffer.Get(), nullptr, render_target_ptr_.GetAddressOf());
 
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Render target creation failed> ", "LECore.cpp",__LINE__, call_result_);
 
+	context_ptr_->OMSetRenderTargets(1,render_target_ptr_.GetAddressOf(),nullptr);
+
+
+
+	
 	// Loading shaders
 
 	load_pixel_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\PixelShader.cso");
 	load_pixel_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\PixelShader1.cso");
 	load_vertex_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\VertexShader.cso");
 	load_vertex_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\VertexShader1.cso");
+
+
+
+	
+	// Viewport set up
+	
+	D3D11_VIEWPORT viewport[]{{0,0,viewport_width,viewport_height,0,1}};
+	
+	context_ptr_->RSSetViewports(1,viewport);
 
 }
 
@@ -84,51 +107,78 @@ void LightEngine::Core::present_frame() {
 		throw LECoreException("<D3D11 ERROR> <Frame rendering failed> ", "LECore.cpp",__LINE__, call_result_);
 }
 
-void LightEngine::Core::set_up_vertex_buffer(Vertex3 *vertex_buffer, int buffer_size) {
+void LightEngine::Core::vertex_buffer_setup(Vertex3 *vertex_buffer, int buffer_size) {
 
 	D3D11_BUFFER_DESC buffer_desc;
 	D3D11_SUBRESOURCE_DATA sr_data;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
 	
 	buffer_desc.ByteWidth = sizeof(Vertex3)*buffer_size;
-	buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
+	buffer_desc.Usage = D3D11_USAGE_DEFAULT;
 	buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	buffer_desc.CPUAccessFlags = 0;
 	buffer_desc.MiscFlags = 0;
 	buffer_desc.StructureByteStride = sizeof(Vertex3);
 
 	sr_data.pSysMem = vertex_buffer;
-	
-	call_result_ = device_ptr_->CreateBuffer(&buffer_desc,&sr_data,buffer.GetAddressOf());
+
+	call_result_ = device_ptr_->CreateBuffer(&buffer_desc, &sr_data, &buffer);
 
 	if(FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Vertex buffer creation failed> ", "LECore.cpp",__LINE__, call_result_);
 
 	UINT stride = sizeof(Vertex3);
 	UINT offset = 0;
-
+	
 	context_ptr_->IASetVertexBuffers(0, 1, buffer.GetAddressOf(), &stride, &offset);
+}
 
+void LightEngine::Core::draw_setup() {
+	
 	context_ptr_->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	context_ptr_->VSSetShader(vertex_shader_ptrs_[1].Get(),nullptr,0);
-	context_ptr_->PSSetShader(pixel_shader_ptrs_[0].Get(),nullptr,0);
-
-	context_ptr_->OMSetRenderTargets(1,render_target_ptr_.GetAddressOf(),nullptr);
-	
-	D3D11_VIEWPORT vport[] {
-		{0,0,800,600,0,1}
-	};
-
-	
-	context_ptr_->RSSetViewports(1,vport);
-
+	context_ptr_->VSSetShader(vertex_shader_ptrs_.at(0).Get(), nullptr, 0);
+	context_ptr_->PSSetShader(pixel_shader_ptrs_.at(0).Get(), nullptr, 0);
 	context_ptr_->IASetInputLayout(input_layout_ptrs_.at(0).Get());
 }
 
-void LightEngine::Core::draw()
-{
-	context_ptr_->Draw(3,0);
+void LightEngine::Core::constant_buffer_setup() {
+
+	D3D11_BUFFER_DESC buffer_desc;
+	D3D11_SUBRESOURCE_DATA sr_data;
+
+	float move_vector[4]{0,0,0,0};
+	buffer_desc.ByteWidth = sizeof(float)*4;
+	buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
+	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	buffer_desc.MiscFlags = 0;
+	buffer_desc.StructureByteStride = sizeof(float);
+
+	sr_data.pSysMem = move_vector;
+
+	call_result_ = device_ptr_->CreateBuffer(&buffer_desc, &sr_data, &constant_buffer_ptr_);
+
+	if(FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Constant buffer creation failed> ", "LECore.cpp",__LINE__, call_result_);
+
+	context_ptr_->VSSetConstantBuffers(0,1,constant_buffer_ptr_.GetAddressOf());
 }
+
+void LightEngine::Core::update_constant_buffer(float move[4]) {
+	D3D11_MAPPED_SUBRESOURCE new_cbuffer;
+	ZeroMemory(&new_cbuffer,sizeof(new_cbuffer));
+
+	call_result_ = context_ptr_->Map(constant_buffer_ptr_.Get(),0,D3D11_MAP_WRITE_DISCARD,0,&new_cbuffer);
+
+	if(FAILED(call_result_))
+		throw LECoreException("<Constant buffer mapping failed> ", "LECore.cpp",__LINE__, call_result_);
+	
+	memcpy(new_cbuffer.pData,move,sizeof(float)*4);
+
+	context_ptr_->Unmap(constant_buffer_ptr_.Get(),0);
+}
+
+void LightEngine::Core::draw_to_back_buffer() const { context_ptr_->Draw(3, 0); }
 
 void LightEngine::Core::load_vertex_shader(std::wstring path) {
 	
