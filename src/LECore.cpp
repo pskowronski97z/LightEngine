@@ -3,12 +3,6 @@
 #include <LEException.h>
 #include <d3dcompiler.h>
 
-const D3D11_INPUT_ELEMENT_DESC LightEngine::Vertex3::vertex_desc_[3] = {
-	{"VT3_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA},
-	{"VT3_COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA},
-	{"VT3_NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA}
-};
-
 
 LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_height) {
 	
@@ -135,7 +129,7 @@ void LightEngine::Core::vertex_buffer_setup(Vertex3 *vertex_buffer, int buffer_s
 
 void LightEngine::Core::draw_setup() {
 	
-	context_ptr_->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	//context_ptr_->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	context_ptr_->VSSetShader(vertex_shader_ptrs_.at(0).Get(), nullptr, 0);
 	context_ptr_->PSSetShader(pixel_shader_ptrs_.at(0).Get(), nullptr, 0);
 	context_ptr_->IASetInputLayout(input_layout_ptrs_.at(0).Get());

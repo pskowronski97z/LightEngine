@@ -2,19 +2,16 @@
 #include <Windows.h>
 #include <d3d11.h>
 #include <wrl.h>
-#include <DirectXMath.h>
 #include <vector>
+#include <LEData.h>
+#include <string>
 
 namespace LightEngine {
 
-	struct __declspec(dllexport) Vertex3 {
-		DirectX::XMFLOAT3 position_;
-		DirectX::XMFLOAT4 color_;
-		DirectX::XMFLOAT3 normal_;
-		static const D3D11_INPUT_ELEMENT_DESC vertex_desc_[3];
-	};
-
+	template <class T> class Geometry;
+	
 	class __declspec(dllexport) Core {
+		friend class Geometry<Vertex3>;
 	private:
 		Microsoft::WRL::ComPtr<IDXGISwapChain> swap_chain_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11Device> device_ptr_;
