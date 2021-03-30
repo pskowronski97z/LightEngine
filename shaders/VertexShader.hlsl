@@ -4,8 +4,9 @@ struct VS_INPUT {
     float3 normal : VT3_NORMAL;
 };
 
-cbuffer MOVE {
-    float4 move_vector;
+cbuffer CAMERA : register(b0) {
+    row_major matrix camera_matrix_;
+    row_major matrix projection_matrix_;
 }
 
 struct PS_INPUT {
@@ -17,8 +18,11 @@ struct PS_INPUT {
 PS_INPUT main(VS_INPUT input) {
 	
     PS_INPUT result;
-
-    result.position = float4(input.position[0] + move_vector[0], input.position[1] + move_vector[1], input.position[2] + move_vector[2], 1.0f);
+	
+    result.position = mul(float4(input.position, 1.0f), camera_matrix_);
+    result.position = mul(result.position, projection_matrix_);
+	
+    //result.position = float4(input.position[0] /*+ move_vector[0]*/, input.position[1] /*+ move_vector[1]*/, input.position[2] /*+ move_vector[2]*/, 1.0f);
     result.color = input.color;
     result.normal = input.normal;
 

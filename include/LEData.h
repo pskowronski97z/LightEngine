@@ -10,5 +10,10 @@ namespace LightEngine {
 		DirectX::XMFLOAT3 normal_;
 		static const D3D11_INPUT_ELEMENT_DESC vertex_desc_[3];
 	};
+
+	struct ViewBuffer {
+		float view_matrix[4][4];
+		
+	};
 	
 }

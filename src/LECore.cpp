@@ -11,11 +11,11 @@ LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_he
 
 	swap_chain_desc.BufferDesc.Height = 0;
 	swap_chain_desc.BufferDesc.Width = 0;
-	swap_chain_desc.BufferDesc.RefreshRate.Denominator = 0;
-	swap_chain_desc.BufferDesc.RefreshRate.Numerator = 0;
+	swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
+	swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
 	swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swap_chain_desc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-	swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+	swap_chain_desc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+	swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_CENTERED;
 
 	swap_chain_desc.SampleDesc.Count = 8;
 	swap_chain_desc.SampleDesc.Quality = 0;
@@ -33,7 +33,7 @@ LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_he
 	nullptr, 
 	D3D_DRIVER_TYPE_HARDWARE,
 	nullptr,
-	D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_DEBUG, 
+	 D3D11_CREATE_DEVICE_DEBUG, 
 	&feature_level,
 	1,
 	D3D11_SDK_VERSION,
@@ -87,6 +87,9 @@ LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_he
 	
 	context_ptr_->RSSetViewports(1,viewport);
 
+
+
+	
 }
 
 void LightEngine::Core::clear_back_buffer(float r, float g, float b, float a) const {
@@ -95,7 +98,7 @@ void LightEngine::Core::clear_back_buffer(float r, float g, float b, float a) co
 }
 
 void LightEngine::Core::present_frame() {
-	call_result_ = swap_chain_ptr_->Present(1u, 0u);
+	call_result_ = swap_chain_ptr_->Present(0u, 0u);
 
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Frame rendering failed> ", "LECore.cpp",__LINE__, call_result_);
@@ -133,43 +136,6 @@ void LightEngine::Core::draw_setup() {
 	context_ptr_->VSSetShader(vertex_shader_ptrs_.at(0).Get(), nullptr, 0);
 	context_ptr_->PSSetShader(pixel_shader_ptrs_.at(0).Get(), nullptr, 0);
 	context_ptr_->IASetInputLayout(input_layout_ptrs_.at(0).Get());
-}
-
-void LightEngine::Core::constant_buffer_setup() {
-
-	D3D11_BUFFER_DESC buffer_desc;
-	D3D11_SUBRESOURCE_DATA sr_data;
-
-	float move_vector[4]{0,0,0,0};
-	buffer_desc.ByteWidth = sizeof(float)*4;
-	buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
-	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	buffer_desc.MiscFlags = 0;
-	buffer_desc.StructureByteStride = sizeof(float);
-
-	sr_data.pSysMem = move_vector;
-
-	call_result_ = device_ptr_->CreateBuffer(&buffer_desc, &sr_data, &constant_buffer_ptr_);
-
-	if(FAILED(call_result_))
-		throw LECoreException("<D3D11 ERROR> <Constant buffer creation failed> ", "LECore.cpp",__LINE__, call_result_);
-
-	context_ptr_->VSSetConstantBuffers(0,1,constant_buffer_ptr_.GetAddressOf());
-}
-
-void LightEngine::Core::update_constant_buffer(float move[4]) {
-	D3D11_MAPPED_SUBRESOURCE new_cbuffer;
-	ZeroMemory(&new_cbuffer,sizeof(new_cbuffer));
-
-	call_result_ = context_ptr_->Map(constant_buffer_ptr_.Get(),0,D3D11_MAP_WRITE_DISCARD,0,&new_cbuffer);
-
-	if(FAILED(call_result_))
-		throw LECoreException("<Constant buffer mapping failed> ", "LECore.cpp",__LINE__, call_result_);
-	
-	memcpy(new_cbuffer.pData,move,sizeof(float)*4);
-
-	context_ptr_->Unmap(constant_buffer_ptr_.Get(),0);
 }
 
 void LightEngine::Core::draw_to_back_buffer() const { context_ptr_->Draw(3, 0); }
@@ -228,6 +194,14 @@ void LightEngine::Core::load_pixel_shader(std::wstring path) {
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Pixel shader initialization fail> ", "LECore.cpp",__LINE__, call_result_);
 
+}
+
+Microsoft::WRL::ComPtr<ID3D11Device> LightEngine::Core::get_device_ptr_() {
+	return device_ptr_;
+}
+
+Microsoft::WRL::ComPtr<ID3D11DeviceContext> LightEngine::Core::get_context_ptr_() {
+	return context_ptr_;
 }
 
 void LightEngine::Core::clear_back_buffer(float clear_color[4]) const {
