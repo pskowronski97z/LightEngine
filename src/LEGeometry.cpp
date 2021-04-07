@@ -37,14 +37,11 @@ LightEngine::Camera::Camera(std::shared_ptr<Core> core_ptr) : core_ptr_(core_ptr
 	D3D11_BUFFER_DESC buffer_desc;
 	D3D11_SUBRESOURCE_DATA sr_data;
 
-	set_fov(60.0);
-	set_clipping(1.0,10.0);
+	set_fov(45);
+	set_clipping(0.0,10.0);
+	set_scaling(16,9);
 
-	transform_matrices_.camera_matrix_ = DirectX::XMMatrixSet(
-		1,0,0,0,
-		0,1,0,0,
-		0,0,1,0,
-		0,0,0,1);
+	reset();
 	
 	buffer_desc.ByteWidth = sizeof(transform_matrices_);
 	buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
@@ -106,7 +103,7 @@ void LightEngine::Camera::set_clipping(float near_z, float far_z) {
 	b_factor_ = -near_z / (far_z - near_z);
 
 	transform_matrices_.projection_matrix_ = DirectX::XMMatrixSet(
-		fov_,0,0,0,
+		fov_*scaling_,0,0,0,
 		0,fov_,0,0,
 		0,0,a_factor_,1,
 		0,0,b_factor_,0);
@@ -116,9 +113,28 @@ void LightEngine::Camera::set_fov(float angle) {
 	fov_ = 1.0/tan(angle*M_PI/360.0);
 
 	transform_matrices_.projection_matrix_ = DirectX::XMMatrixSet(
-		fov_,0,0,0,
+		fov_*scaling_,0,0,0,
 		0,fov_,0,0,
 		0,0,a_factor_,1,
 		0,0,b_factor_,0);
 }
+
+void LightEngine::Camera::set_scaling(short width, short height) {
+	scaling_ = (float)height / (float)width;
+	
+	transform_matrices_.projection_matrix_ = DirectX::XMMatrixSet(
+		fov_*scaling_,0,0,0,
+		0,fov_,0,0,
+		0,0,a_factor_,1,
+		0,0,b_factor_,0);
+}
+
+void LightEngine::Camera::reset() {
+	transform_matrices_.camera_matrix_ = DirectX::XMMatrixSet(
+		1,0,0,0,
+		0,1,0,0,
+		0,0,1,0,
+		0,0,0,1);
+}
+
 

@@ -21,8 +21,6 @@ PS_INPUT main(VS_INPUT input) {
 	
     result.position = mul(float4(input.position, 1.0f), camera_matrix_);
     result.position = mul(result.position, projection_matrix_);
-	
-    //result.position = float4(input.position[0] /*+ move_vector[0]*/, input.position[1] /*+ move_vector[1]*/, input.position[2] /*+ move_vector[2]*/, 1.0f);
     result.color = input.color;
     result.normal = input.normal;
 

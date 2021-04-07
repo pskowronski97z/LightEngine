@@ -18,7 +18,8 @@ namespace LightEngine {
 		float fov_ = 0;
 		float a_factor_ = 0;
 		float b_factor_ = 0;
-
+		float scaling_ = 1;
+		
 	public:
 		Camera(std::shared_ptr<Core> core_ptr);
 		void set_active();
@@ -29,6 +30,8 @@ namespace LightEngine {
 		void move(float vector[3]);
 		void set_clipping(float near_z, float far_z);
 		void set_fov(float angle);
+		void set_scaling(short width, short height);
+		void reset();
 	};
 	
 	template <class T> 
@@ -44,6 +47,7 @@ namespace LightEngine {
 		HRESULT call_result_;
 	public:
 		Geometry(std::shared_ptr<Core> core_ptr, std::vector<T> vertices, D3D11_PRIMITIVE_TOPOLOGY topology);
+		//TODO: Indexed vertices handling
 		void set_indices(std::vector<int> indices);
 		void bind();
 	};

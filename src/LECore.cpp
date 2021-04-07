@@ -15,7 +15,7 @@ LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_he
 	swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
 	swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swap_chain_desc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_CENTERED;
+	swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 
 	swap_chain_desc.SampleDesc.Count = 8;
 	swap_chain_desc.SampleDesc.Quality = 0;
@@ -98,7 +98,7 @@ void LightEngine::Core::clear_back_buffer(float r, float g, float b, float a) co
 }
 
 void LightEngine::Core::present_frame() {
-	call_result_ = swap_chain_ptr_->Present(0u, 0u);
+	call_result_ = swap_chain_ptr_->Present(1u, 0u);
 
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Frame rendering failed> ", "LECore.cpp",__LINE__, call_result_);
@@ -138,7 +138,7 @@ void LightEngine::Core::draw_setup() {
 	context_ptr_->IASetInputLayout(input_layout_ptrs_.at(0).Get());
 }
 
-void LightEngine::Core::draw_to_back_buffer() const { context_ptr_->Draw(3, 0); }
+void LightEngine::Core::draw_to_back_buffer() const { context_ptr_->Draw(6, 0); }
 
 void LightEngine::Core::load_vertex_shader(std::wstring path) {
 	
