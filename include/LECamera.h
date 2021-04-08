@@ -5,8 +5,7 @@
 
 namespace LightEngine {
 
-	class Camera {
-
+	class __declspec(dllexport) Camera {
 	public:
 		/// <summary>
 		/// Passing camera and projection matrices as constant buffer to GPU's r<slot> register. 
@@ -20,14 +19,12 @@ namespace LightEngine {
 		void reset_position();
 		
 	protected:
+		bool need_projection_update = false;
 		struct TransformMatrices {
 			DirectX::XMMATRIX camera_matrix;
 			DirectX::XMMATRIX projection_matrix;
 		};
 		TransformMatrices transform_matrices_;
-		Camera(std::shared_ptr<Core> core_ptr);
-	
-	private:
 		HRESULT call_result_;
 		std::shared_ptr<Core> core_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> constant_buffer_ptr_;
@@ -38,11 +35,18 @@ namespace LightEngine {
 			0, 0, 1, 0
 		};
 		float scaling_ = 1;
+		
 		void update_projection();
+		Camera(std::shared_ptr<Core> core_ptr);
 	};
 
-	class __declspec(dllexport) WorldCamera : Camera {
-		
+	class __declspec(dllexport) WorldCamera : public Camera {
+	public:
+		WorldCamera(std::shared_ptr<Core> core_ptr);
+		void rotate_x(float angle);
+		void rotate_y(float angle);
+		void rotate_z(float angle);
+		void move(float vector[3]);
 	};
 
 	class __declspec(dllexport) OrbitCamera : Camera {

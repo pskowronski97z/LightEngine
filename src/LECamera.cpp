@@ -34,14 +34,19 @@ LightEngine::Camera::Camera(std::shared_ptr<Core> core_ptr) : core_ptr_(core_ptr
 void LightEngine::Camera::set_fov(float angle) {
 	temp_projection_matrix_[0][0] = 1.0/tan(angle*M_PI/360.0);
 	temp_projection_matrix_[1][1] = 1.0/tan(angle*M_PI/360.0);
+	need_projection_update = true;
 }
 
 void LightEngine::Camera::set_clipping(float near_z, float far_z) {
 	temp_projection_matrix_[2][2] = 1.0f / (far_z - near_z);
 	temp_projection_matrix_[3][2] = -near_z / (far_z - near_z);
+	need_projection_update = true;
 }
 
-void LightEngine::Camera::set_scaling(short width, short height) { scaling_ = static_cast<float>(height) / static_cast<float>(width); }
+void LightEngine::Camera::set_scaling(short width, short height) {
+	scaling_ = static_cast<float>(height) / static_cast<float>(width);
+	need_projection_update = true;
+}
 
 void LightEngine::Camera::update_projection() {
 	transform_matrices_.projection_matrix = DirectX::XMMatrixSet(
@@ -50,6 +55,7 @@ void LightEngine::Camera::update_projection() {
 		temp_projection_matrix_[2][0], temp_projection_matrix_[2][1], temp_projection_matrix_[2][2], temp_projection_matrix_[2][3],
 		temp_projection_matrix_[3][0], temp_projection_matrix_[3][1], temp_projection_matrix_[3][2], temp_projection_matrix_[3][3]
 	);
+	need_projection_update = false;
 }
 
 void LightEngine::Camera::set_active(short slot) {
@@ -67,7 +73,8 @@ void LightEngine::Camera::reset_position() {
 
 void LightEngine::Camera::update() {
 
-	update_projection();
+	if(need_projection_update) 
+		update_projection();
 	
 	D3D11_MAPPED_SUBRESOURCE new_constant_buffer;
 	ZeroMemory(&new_constant_buffer,sizeof(new_constant_buffer));
@@ -81,3 +88,26 @@ void LightEngine::Camera::update() {
 
 	core_ptr_->context_ptr_->Unmap(constant_buffer_ptr_.Get(),0);
 }
+
+LightEngine::WorldCamera::WorldCamera(std::shared_ptr<Core> core_ptr) : Camera(core_ptr) {}
+
+void LightEngine::WorldCamera::rotate_x(float angle) {
+	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationX(angle*M_PI/180.0f);
+}
+
+void LightEngine::WorldCamera::rotate_y(float angle) {
+	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationY(angle*M_PI/180.0f);
+}
+
+void LightEngine::WorldCamera::rotate_z(float angle) {
+	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationZ(angle*M_PI/180.0f);
+}
+
+void LightEngine::WorldCamera::move(float vector[3]) {
+	transform_matrices_.camera_matrix+=DirectX::XMMatrixSet(
+		0,0,0,0,
+		0,0,0,0,
+		0,0,0,0,
+		vector[0],vector[1],vector[2],0);
+}
+
