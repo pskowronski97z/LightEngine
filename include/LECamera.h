@@ -35,7 +35,8 @@ namespace LightEngine {
 			0, 0, 1, 0
 		};
 		float scaling_ = 1;
-		
+
+		virtual void update_preprocess();
 		void update_projection();
 		Camera(std::shared_ptr<Core> core_ptr);
 	};
@@ -49,12 +50,22 @@ namespace LightEngine {
 		void move(float vector[3]);
 	};
 
-	class __declspec(dllexport) OrbitCamera : Camera {
+	class __declspec(dllexport) OrbitCamera : public Camera {
+	public:
+		OrbitCamera(std::shared_ptr<Core> core_ptr);
+		void move(float vector[3]);
+		void set_radius(float radius);
+		void tweak_azimuth(float angle);
+		void tweak_elevation(float angle);
 		
-	};
-
-	class __declspec(dllexport) FPSCamera : Camera {
-		
+	private:
+		bool need_position_update_ = false;
+		float radius_ = 2.4;
+		float azimuth_ = 0.0f;
+		float elevation_ = 0.0f;
+		float center_[3] = {0.0f, 0.0f,2.5f};	
+		void calculate_position();
+		void update_preprocess() override;
 	};
 	
 }

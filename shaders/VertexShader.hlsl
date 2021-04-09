@@ -5,8 +5,8 @@ struct VS_INPUT {
 };
 
 cbuffer CAMERA : register(b0) {
-    row_major matrix camera_matrix_;
-    row_major matrix projection_matrix_;
+    matrix camera_matrix_;
+    matrix projection_matrix_;
 }
 
 struct PS_INPUT {

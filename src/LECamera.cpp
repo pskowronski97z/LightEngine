@@ -1,5 +1,7 @@
+#include <iostream>
 #include <LECamera.h>
 #include <LEException.h>
+#include <ostream>
 
 #define M_PI 3.14159265358979323846
 
@@ -22,7 +24,12 @@ LightEngine::Camera::Camera(std::shared_ptr<Core> core_ptr) : core_ptr_(core_ptr
 	buffer_desc.MiscFlags = 0;
 	buffer_desc.StructureByteStride = sizeof(float);
 
-	sr_data.pSysMem = &transform_matrices_;
+	TransformMatrices transposed_matrices;
+
+	transposed_matrices.camera_matrix = XMMatrixTranspose(transform_matrices_.camera_matrix);
+	transposed_matrices.projection_matrix = XMMatrixTranspose(transform_matrices_.projection_matrix);
+	
+	sr_data.pSysMem = &transposed_matrices;
 
 	call_result_ = core_ptr_->device_ptr_->CreateBuffer(&buffer_desc, &sr_data, &constant_buffer_ptr_);
 
@@ -46,6 +53,11 @@ void LightEngine::Camera::set_clipping(float near_z, float far_z) {
 void LightEngine::Camera::set_scaling(short width, short height) {
 	scaling_ = static_cast<float>(height) / static_cast<float>(width);
 	need_projection_update = true;
+}
+
+void LightEngine::Camera::update_preprocess() {
+	if(need_projection_update) 
+		update_projection();
 }
 
 void LightEngine::Camera::update_projection() {
@@ -73,8 +85,12 @@ void LightEngine::Camera::reset_position() {
 
 void LightEngine::Camera::update() {
 
-	if(need_projection_update) 
-		update_projection();
+	update_preprocess();
+
+	TransformMatrices transposed_matrices;
+
+	transposed_matrices.camera_matrix = XMMatrixTranspose(transform_matrices_.camera_matrix);
+	transposed_matrices.projection_matrix = XMMatrixTranspose(transform_matrices_.projection_matrix);
 	
 	D3D11_MAPPED_SUBRESOURCE new_constant_buffer;
 	ZeroMemory(&new_constant_buffer,sizeof(new_constant_buffer));
@@ -82,12 +98,14 @@ void LightEngine::Camera::update() {
 	call_result_ = core_ptr_->context_ptr_->Map(constant_buffer_ptr_.Get(),0,D3D11_MAP_WRITE_DISCARD,0,&new_constant_buffer);
 
 	if(FAILED(call_result_))
-		throw LECoreException("<Constant buffer mapping failed> ", "LEGeometry.cpp",__LINE__, call_result_);
+		throw LECoreException("<Constant buffer mapping failed> ", "LECamera.cpp",__LINE__, call_result_);
 	
-	memcpy(new_constant_buffer.pData,&transform_matrices_,sizeof(transform_matrices_));
+	memcpy(new_constant_buffer.pData,&transposed_matrices,sizeof(transposed_matrices));
 
 	core_ptr_->context_ptr_->Unmap(constant_buffer_ptr_.Get(),0);
 }
+
+
 
 LightEngine::WorldCamera::WorldCamera(std::shared_ptr<Core> core_ptr) : Camera(core_ptr) {}
 
@@ -110,4 +128,67 @@ void LightEngine::WorldCamera::move(float vector[3]) {
 		0,0,0,0,
 		vector[0],vector[1],vector[2],0);
 }
+
+
+
+LightEngine::OrbitCamera::OrbitCamera(std::shared_ptr<Core> core_ptr) : Camera(core_ptr) {
+	calculate_position();
+	update();
+}
+
+void LightEngine::OrbitCamera::move(float vector[3]) {
+	center_[0] += vector[0];
+	center_[1] += vector[1];
+	center_[2] += vector[2];
+	need_position_update_ = true;
+}
+
+void LightEngine::OrbitCamera::set_radius(float radius) {
+	radius_ = radius;
+	need_position_update_ = true;
+}
+
+void LightEngine::OrbitCamera::tweak_azimuth(float angle) {
+	azimuth_ += angle;
+	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationY(angle*M_PI/180.0f);
+	need_position_update_ = true;
+}
+
+void LightEngine::OrbitCamera::tweak_elevation(float angle) {
+	elevation_ += angle;
+	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationX(angle*M_PI/180.0f);
+	need_position_update_ = true;
+}
+
+void LightEngine::OrbitCamera::calculate_position() {
+
+	transform_matrices_.camera_matrix = DirectX::XMMatrixSet(
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 0
+	) * transform_matrices_.camera_matrix;
+
+	float fx = center_[0] - radius_*sin(azimuth_*M_PI/180.0f);
+	float fy = center_[1] - radius_*sin(elevation_*M_PI/180.0f);
+	float fz = center_[2] - radius_*cos(azimuth_*M_PI/180.0f);
+	
+	transform_matrices_.camera_matrix += DirectX::XMMatrixSet(
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		fx, fy, fz, 1.0f
+		);
+
+	
+	need_position_update_ = false;
+}
+
+void LightEngine::OrbitCamera::update_preprocess() {
+	if(need_projection_update)
+		update_projection();
+	if(need_position_update_)
+		calculate_position();
+}
+
 
