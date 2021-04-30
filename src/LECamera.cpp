@@ -114,7 +114,7 @@ void LightEngine::WorldCamera::rotate_x(float angle) {
 }
 
 void LightEngine::WorldCamera::rotate_y(float angle) {
-	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationY(angle*M_PI/180.0f);
+	transform_matrices_.camera_matrix *= DirectX::XMMatrixRotationY(angle * M_PI / 180.0f);
 }
 
 void LightEngine::WorldCamera::rotate_z(float angle) {
@@ -122,73 +122,47 @@ void LightEngine::WorldCamera::rotate_z(float angle) {
 }
 
 void LightEngine::WorldCamera::move(float vector[3]) {
-	transform_matrices_.camera_matrix+=DirectX::XMMatrixSet(
+	transform_matrices_.camera_matrix += DirectX::XMMatrixSet(
 		0,0,0,0,
 		0,0,0,0,
 		0,0,0,0,
-		vector[0],vector[1],vector[2],0);
+		vector[0],vector[1],vector[2],0)*transform_matrices_.camera_matrix;
+
 }
 
+LightEngine::OrbitCamera::OrbitCamera(std::shared_ptr<Core> core_ptr) : Camera(core_ptr) {update_position(); update();}
 
-
-LightEngine::OrbitCamera::OrbitCamera(std::shared_ptr<Core> core_ptr) : Camera(core_ptr) {
-	calculate_position();
-	update();
+void LightEngine::OrbitCamera::move(float azimuth_delta, float elevation_delta, float radius_delta) {
+	azimuth_ += azimuth_delta;
+	elevation_ += elevation_delta;
+	radius_ = abs(radius_ + radius_delta);
+	update_position();
 }
 
-void LightEngine::OrbitCamera::move(float vector[3]) {
-	center_[0] += vector[0];
-	center_[1] += vector[1];
-	center_[2] += vector[2];
-	need_position_update_ = true;
-}
+void LightEngine::OrbitCamera::update_position() {
 
-void LightEngine::OrbitCamera::set_radius(float radius) {
-	radius_ = radius;
-	need_position_update_ = true;
-}
+	float new_position[4]{0};
 
-void LightEngine::OrbitCamera::tweak_azimuth(float angle) {
-	azimuth_ += angle;
-	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationY(angle*M_PI/180.0f);
-	need_position_update_ = true;
-}
+	new_position[0] = -radius_*cos(elevation_*M_PI/180.0f)*sin(azimuth_*M_PI/180.0f);
+	new_position[1] = -radius_*sin(elevation_*M_PI/180.0f);
+	new_position[2] = radius_*cos(elevation_*M_PI/180.0f)*cos(azimuth_*M_PI/180.0f);
 
-void LightEngine::OrbitCamera::tweak_elevation(float angle) {
-	elevation_ += angle;
-	transform_matrices_.camera_matrix*= DirectX::XMMatrixRotationX(angle*M_PI/180.0f);
-	need_position_update_ = true;
-}
+	std::cout<<"X: "<<new_position[0]<<"|Y:"<<new_position[1]<<"|Z:"<<new_position[2]<<std::endl;
 
-void LightEngine::OrbitCamera::calculate_position() {
+	
+	DirectX::XMMATRIX new_position_in_c_space = DirectX::XMMatrixSet(
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		new_position[0], new_position[1], new_position[2], 0)*transform_matrices_.camera_matrix;
 
 	transform_matrices_.camera_matrix = DirectX::XMMatrixSet(
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
-		0, 0, 0, 0
-	) * transform_matrices_.camera_matrix;
-
-	float fx = center_[0] - radius_*sin(azimuth_*M_PI/180.0f);
-	float fy = center_[1] - radius_*sin(elevation_*M_PI/180.0f);
-	float fz = center_[2] - radius_*cos(azimuth_*M_PI/180.0f);
+		0, 0, 0, 0) * transform_matrices_.camera_matrix;
 	
-	transform_matrices_.camera_matrix += DirectX::XMMatrixSet(
-		0, 0, 0, 0,
-		0, 0, 0, 0,
-		0, 0, 0, 0,
-		fx, fy, fz, 1.0f
-		);
+	transform_matrices_.camera_matrix += new_position_in_c_space;
 
 	
-	need_position_update_ = false;
 }
-
-void LightEngine::OrbitCamera::update_preprocess() {
-	if(need_projection_update)
-		update_projection();
-	if(need_position_update_)
-		calculate_position();
-}
-
-

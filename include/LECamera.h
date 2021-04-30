@@ -5,6 +5,7 @@
 
 namespace LightEngine {
 
+	//TODO: fix virtual destructor, copy constructor, etc.
 	class __declspec(dllexport) Camera {
 	public:
 		/// <summary>
@@ -51,21 +52,17 @@ namespace LightEngine {
 	};
 
 	class __declspec(dllexport) OrbitCamera : public Camera {
+		
 	public:
 		OrbitCamera(std::shared_ptr<Core> core_ptr);
-		void move(float vector[3]);
-		void set_radius(float radius);
-		void tweak_azimuth(float angle);
-		void tweak_elevation(float angle);
-		
+		void move(float azimuth_delta, float elevation_delta, float radius_delta);
+
 	private:
-		bool need_position_update_ = false;
-		float radius_ = 2.4;
-		float azimuth_ = 0.0f;
-		float elevation_ = 0.0f;
-		float center_[3] = {0.0f, 0.0f,2.5f};	
-		void calculate_position();
-		void update_preprocess() override;
+		// angles in degrees
+		float azimuth_ = 0;
+		float elevation_ = 0;
+		float radius_ = 1;
+		void update_position();
 	};
 	
 }
