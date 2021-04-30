@@ -55,13 +55,14 @@ namespace LightEngine {
 		
 	public:
 		OrbitCamera(std::shared_ptr<Core> core_ptr);
-		void move(float azimuth_delta, float elevation_delta, float radius_delta);
-
+		void adjust(float azimuth_delta, float elevation_delta, float radius_delta);
+		void set_center(float center[3]);
 	private:
 		// angles in degrees
 		float azimuth_ = 0;
 		float elevation_ = 0;
-		float radius_ = 1;
+		float radius_ = 2;
+		float center_[3]{0};
 		void update_position();
 	};
 	
