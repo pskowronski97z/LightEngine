@@ -65,7 +65,7 @@ namespace LightEngine {
 		float azimuth_ = 0;
 		float elevation_ = 0;
 		float radius_ = 2;
-		float center_[3]{0,0,2.5};
+		float center_[3]{0};
 		void update_position();
 	};
 	
