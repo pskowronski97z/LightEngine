@@ -146,6 +146,9 @@ void LightEngine::OrbitCamera::adjust_azimuth(float azimuth_delta) {
 
 	azimuth_ += azimuth_delta;
 
+	if(azimuth_ == 360 || azimuth_ == -360)
+		azimuth_=0;
+
 	if(azimuth_delta > 0){
 		transform_matrices_.camera_matrix *= DirectX::XMMatrixRotationY((azimuth_delta*cos(elevation_*M_PI/180.0f))*M_PI/180.0f);
 		transform_matrices_.camera_matrix *= DirectX::XMMatrixRotationZ(-(azimuth_delta*sin(elevation_*M_PI/180.0f))*M_PI/180.0f);
@@ -162,6 +165,9 @@ void LightEngine::OrbitCamera::adjust_elevation(float elevation_delta) {
 
 	if(elevation_delta==0.0)
 		return;
+
+	if(elevation_ == 360 || elevation_ == -360)
+		elevation_=0;
 
 	elevation_ += elevation_delta;
 
@@ -193,6 +199,18 @@ void LightEngine::OrbitCamera::reset() {
 	
 }
 
+float LightEngine::OrbitCamera::get_azimuth() { return azimuth_; }
+
+float LightEngine::OrbitCamera::get_elevation() { return elevation_; }
+
+float LightEngine::OrbitCamera::get_radius() { return radius_; }
+
+void LightEngine::OrbitCamera::get_center(float buffer[3]) {
+	buffer[0]=center_[0];
+	buffer[1]=center_[1];
+	buffer[2]=center_[2];
+}
+
 void LightEngine::OrbitCamera::update_position() {
 
 	float new_position[4]{0};
@@ -215,3 +233,4 @@ void LightEngine::OrbitCamera::update_position() {
 	
 	transform_matrices_.camera_matrix += new_position_in_c_space;
 }
+

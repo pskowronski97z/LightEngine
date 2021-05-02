@@ -51,8 +51,7 @@ namespace LightEngine {
 		void move(float vector[3]);
 	};
 
-	class __declspec(dllexport) OrbitCamera : public Camera {
-		
+	class __declspec(dllexport) OrbitCamera : public Camera {		
 	public:
 		OrbitCamera(std::shared_ptr<Core> core_ptr);
 		void set_center(float center[3]);
@@ -60,6 +59,11 @@ namespace LightEngine {
 		void adjust_elevation(float elevation_delta);
 		void adjust_radius(float radius_delta);
 		void reset() override;
+		float get_azimuth();
+		float get_elevation();
+		float get_radius();
+		void get_center(float buffer[3]);
+		
 	private:
 		// angles in degrees
 		float azimuth_ = 0;

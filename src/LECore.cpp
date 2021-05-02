@@ -138,7 +138,7 @@ void LightEngine::Core::draw_setup() {
 	context_ptr_->IASetInputLayout(input_layout_ptrs_.at(0).Get());
 }
 
-void LightEngine::Core::draw_to_back_buffer() const { context_ptr_->Draw(6, 0); }
+void LightEngine::Core::draw_to_back_buffer(int vertex_count) const { context_ptr_->Draw(vertex_count, 0); }
 
 void LightEngine::Core::load_vertex_shader(std::wstring path) {
 	
