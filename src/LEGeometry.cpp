@@ -24,7 +24,33 @@ LightEngine::Geometry<T>::Geometry(std::shared_ptr<Core> core_ptr, std::vector<T
 		throw LECoreException("<D3D11 ERROR> <Vertex buffer creation failed> ", "LEGeometry.cpp",__LINE__, call_result_);
 }
 
-template<class T> 
+template<class T>
+void LightEngine::Geometry<T>::set_indices(std::vector<unsigned int> indices) {
+
+	indices_vector_ = indices;
+
+	D3D11_SUBRESOURCE_DATA sr_data;
+	
+	buffer_descriptor_.ByteWidth = sizeof(unsigned int)*indices_vector_.size();
+	buffer_descriptor_.Usage = D3D11_USAGE_DEFAULT;
+	buffer_descriptor_.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	buffer_descriptor_.CPUAccessFlags = 0;
+	buffer_descriptor_.MiscFlags = 0;
+	buffer_descriptor_.StructureByteStride = sizeof(unsigned int);
+
+	sr_data.pSysMem = indices_vector_.data();
+	sr_data.SysMemPitch = 0;
+	sr_data.SysMemSlicePitch = 0;
+	
+	call_result_ = core_ptr_->device_ptr_->CreateBuffer(&buffer_descriptor_, &sr_data, &index_buffer_);
+
+	if(FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Index buffer creation failed> ", "LEGeometry.cpp",__LINE__, call_result_);
+
+	core_ptr_->context_ptr_->IASetIndexBuffer(index_buffer_.Get(),DXGI_FORMAT_R32_UINT,0);
+}
+
+template<class T>
 void LightEngine::Geometry<T>::bind() {
 	UINT stride = sizeof(T);
 	UINT offset = 0;
@@ -32,4 +58,11 @@ void LightEngine::Geometry<T>::bind() {
 	core_ptr_->context_ptr_->IASetPrimitiveTopology(primitive_topology_);
 }
 
+template<class T>
+void LightEngine::Geometry<T>::draw(int start_loc) {
+	if(indices_vector_.size())
+		core_ptr_->context_ptr_->DrawIndexed(indices_vector_.size(),start_loc,0);
+	else
+		core_ptr_->context_ptr_->Draw(vertices_vector_.size(),start_loc);
+}
 

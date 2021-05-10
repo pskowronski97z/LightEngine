@@ -149,7 +149,7 @@ void LightEngine::OrbitCamera::adjust_azimuth(float azimuth_delta) {
 	if(azimuth_ == 360 || azimuth_ == -360)
 		azimuth_=0;
 
-	if(azimuth_delta > 0){
+	if(azimuth_delta > 0) {
 		transform_matrices_.camera_matrix *= DirectX::XMMatrixRotationY((azimuth_delta*cos(elevation_*M_PI/180.0f))*M_PI/180.0f);
 		transform_matrices_.camera_matrix *= DirectX::XMMatrixRotationZ(-(azimuth_delta*sin(elevation_*M_PI/180.0f))*M_PI/180.0f);
 	}

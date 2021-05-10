@@ -13,13 +13,14 @@ namespace LightEngine {
 		D3D11_BUFFER_DESC buffer_descriptor_;
 		D3D11_PRIMITIVE_TOPOLOGY primitive_topology_;
 		std::vector<T> vertices_vector_;
-		std::vector<int> indices_vector_;
+		std::vector<unsigned int> indices_vector_;
 		HRESULT call_result_;
 	public:
 		Geometry(std::shared_ptr<Core> core_ptr, std::vector<T> vertices, D3D11_PRIMITIVE_TOPOLOGY topology);
 		//TODO: Indexed vertices handling
-		void set_indices(std::vector<int> indices);
+		void set_indices(std::vector<unsigned int> indices);
 		void bind();
+		void draw(int start_loc);
 	};
 
 	template class __declspec(dllexport) Geometry<Vertex3>;

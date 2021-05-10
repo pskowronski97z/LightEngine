@@ -38,7 +38,7 @@ namespace LightEngine {
 		void present_frame();
 		void vertex_buffer_setup(Vertex3 *vertex_buffer, int buffer_size);
 		void draw_setup();
-		void draw_to_back_buffer(int vertex_count) const;
+		//void draw_to_back_buffer(int vertex_count) const;
 		void load_vertex_shader(std::wstring path);
 		void load_pixel_shader(std::wstring path);
 		Microsoft::WRL::ComPtr<ID3D11Device> get_device_ptr_();
