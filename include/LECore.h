@@ -20,7 +20,7 @@ namespace LightEngine {
 		Microsoft::WRL::ComPtr<ID3D11Device> device_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> render_target_ptr_;
-
+		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depth_view_ptr_;				
 		
 		std::vector<Microsoft::WRL::ComPtr<ID3D11VertexShader>> vertex_shader_ptrs_;
 		std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> c_vertex_shader_ptrs_;
@@ -38,7 +38,6 @@ namespace LightEngine {
 		void present_frame();
 		void vertex_buffer_setup(Vertex3 *vertex_buffer, int buffer_size);
 		void draw_setup();
-		//void draw_to_back_buffer(int vertex_count) const;
 		void load_vertex_shader(std::wstring path);
 		void load_pixel_shader(std::wstring path);
 		Microsoft::WRL::ComPtr<ID3D11Device> get_device_ptr_();

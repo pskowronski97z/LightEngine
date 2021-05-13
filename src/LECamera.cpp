@@ -11,7 +11,7 @@ LightEngine::Camera::Camera(std::shared_ptr<Core> core_ptr) : core_ptr_(core_ptr
 	D3D11_SUBRESOURCE_DATA sr_data;
 
 	set_fov(45);
-	set_clipping(0.0,10.0);
+	set_clipping(1.0,10.0);
 	set_scaling(16,9);
 
 	reset();
@@ -130,7 +130,7 @@ void LightEngine::WorldCamera::move(float vector[3]) {
 }
 
 
-LightEngine::OrbitCamera::OrbitCamera(std::shared_ptr<Core> core_ptr) : Camera(core_ptr) {update_position(); update();}
+LightEngine::OrbitCamera::OrbitCamera(std::shared_ptr<Core> core_ptr) : Camera(core_ptr) {/*update_position(); update();*/}
 
 void LightEngine::OrbitCamera::set_center(float center[3]) {
 	center_[0]=center[0];
@@ -229,8 +229,17 @@ void LightEngine::OrbitCamera::update_position() {
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
-		0, 0, 0, 0) * transform_matrices_.camera_matrix;
+		0, 0, 0, 0)*transform_matrices_.camera_matrix;
 	
 	transform_matrices_.camera_matrix += new_position_in_c_space;
+
+	DirectX::XMMATRIX excess_one = DirectX::XMMatrixSet(
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 1.0f);
+
+	transform_matrices_.camera_matrix+=excess_one;
+
 }
 

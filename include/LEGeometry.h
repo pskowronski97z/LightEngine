@@ -10,7 +10,6 @@ namespace LightEngine {
 		std::shared_ptr<Core> core_ptr_;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> vertex_buffer_;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> index_buffer_;
-		D3D11_BUFFER_DESC buffer_descriptor_;
 		D3D11_PRIMITIVE_TOPOLOGY primitive_topology_;
 		std::vector<T> vertices_vector_;
 		std::vector<unsigned int> indices_vector_;

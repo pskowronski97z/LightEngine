@@ -17,8 +17,8 @@ LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_he
 	swap_chain_desc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 
-	swap_chain_desc.SampleDesc.Count = 8;
-	swap_chain_desc.SampleDesc.Quality = 0;
+	swap_chain_desc.SampleDesc.Count = 8u;
+	swap_chain_desc.SampleDesc.Quality = 0u;
 	
 	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swap_chain_desc.BufferCount = 1;
@@ -66,11 +66,10 @@ LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_he
 	if (FAILED(call_result_))
 		throw LECoreException("<D3D11 ERROR> <Render target creation failed> ", "LECore.cpp",__LINE__, call_result_);
 
-	context_ptr_->OMSetRenderTargets(1,render_target_ptr_.GetAddressOf(),nullptr);
-
-
-
 	
+	//context_ptr_->OMSetRenderTargets(1,render_target_ptr_.GetAddressOf(),nullptr);
+
+
 	// Loading shaders
 
 	load_pixel_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\PixelShader.cso");
@@ -79,22 +78,104 @@ LightEngine::Core::Core(HWND window_handle_, int viewport_width, int viewport_he
 	load_vertex_shader(L"B:\\source\\repos\\LightEngine\\bin\\Debug\\VertexShader1.cso");
 
 
+	// Z-Buffer setup
+
+	D3D11_TEXTURE2D_DESC depth_texture_desc = {};
+	{
+	depth_texture_desc.Width = viewport_width;
+	depth_texture_desc.Height = viewport_height;
+	depth_texture_desc.MipLevels = 1u;
+	depth_texture_desc.ArraySize = 1u;
+	depth_texture_desc.Format = DXGI_FORMAT_D32_FLOAT;
+	depth_texture_desc.SampleDesc.Count = 8u;
+	depth_texture_desc.SampleDesc.Quality = 0u;
+	depth_texture_desc.Usage = D3D11_USAGE_DEFAULT;
+	depth_texture_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	}
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> depth_texture;
+	
+	call_result_ = device_ptr_->CreateTexture2D(&depth_texture_desc,NULL, &depth_texture);
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Depth texture creation failed> ", "LECore.cpp",__LINE__, call_result_);
+
+
+
+
+
+
+	
+	D3D11_DEPTH_STENCIL_DESC dsDesc;
+
+	{
+	// Depth test parameters
+	dsDesc.DepthEnable = true;
+	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+	// Stencil test parameters
+	dsDesc.StencilEnable = true;
+	dsDesc.StencilReadMask = 0xFF;
+	dsDesc.StencilWriteMask = 0xFF;
+
+	// Stencil operations if pixel is front-facing
+	dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing
+	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	}
+	
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depth_stencil_state;
+	
+	call_result_ = device_ptr_->CreateDepthStencilState(&dsDesc, &depth_stencil_state);
+	
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Stencil state creation failed> ", "LECore.cpp",__LINE__, call_result_);
+	
+	context_ptr_->OMSetDepthStencilState(depth_stencil_state.Get(),1u);
+	
+
+
+
+
+
+	
+	D3D11_DEPTH_STENCIL_VIEW_DESC view_desc={};
+
+	view_desc.Format = DXGI_FORMAT_D32_FLOAT;
+	view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+	view_desc.Texture2D.MipSlice = 0u;
+	
+	call_result_ = device_ptr_->CreateDepthStencilView(depth_texture.Get(), &view_desc, &depth_view_ptr_);
+
+	if (FAILED(call_result_))
+		throw LECoreException("<D3D11 ERROR> <Stencil view creation failed> ", "LECore.cpp",__LINE__, call_result_);
+	
+
+	context_ptr_->OMSetRenderTargets(1u,render_target_ptr_.GetAddressOf(),depth_view_ptr_.Get());
+
+
+
+
 
 	
 	// Viewport set up
 	
 	D3D11_VIEWPORT viewport[]{{0,0,viewport_width,viewport_height,0,1}};
 	
-	context_ptr_->RSSetViewports(1,viewport);
-
-
-
-	
+	context_ptr_->RSSetViewports(1u,viewport);
 }
 
 void LightEngine::Core::clear_back_buffer(float r, float g, float b, float a) const {
 	const float clear_color[]{r, g, b, a};
 	context_ptr_->ClearRenderTargetView(render_target_ptr_.Get(), clear_color);
+	context_ptr_->ClearDepthStencilView(depth_view_ptr_.Get(),D3D11_CLEAR_DEPTH,1.0f,0u);
 }
 
 void LightEngine::Core::present_frame() {
@@ -131,14 +212,10 @@ void LightEngine::Core::vertex_buffer_setup(Vertex3 *vertex_buffer, int buffer_s
 }
 
 void LightEngine::Core::draw_setup() {
-	
-	//context_ptr_->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	context_ptr_->VSSetShader(vertex_shader_ptrs_.at(0).Get(), nullptr, 0);
 	context_ptr_->PSSetShader(pixel_shader_ptrs_.at(0).Get(), nullptr, 0);
 	context_ptr_->IASetInputLayout(input_layout_ptrs_.at(0).Get());
 }
-
-//void LightEngine::Core::draw_to_back_buffer(int vertex_count) const { context_ptr_->Draw(vertex_count, 0); }
 
 void LightEngine::Core::load_vertex_shader(std::wstring path) {
 	
@@ -196,15 +273,12 @@ void LightEngine::Core::load_pixel_shader(std::wstring path) {
 
 }
 
-Microsoft::WRL::ComPtr<ID3D11Device> LightEngine::Core::get_device_ptr_() {
-	return device_ptr_;
-}
+Microsoft::WRL::ComPtr<ID3D11Device> LightEngine::Core::get_device_ptr_() { return device_ptr_; }
 
-Microsoft::WRL::ComPtr<ID3D11DeviceContext> LightEngine::Core::get_context_ptr_() {
-	return context_ptr_;
-}
+Microsoft::WRL::ComPtr<ID3D11DeviceContext> LightEngine::Core::get_context_ptr_() { return context_ptr_; }
 
 void LightEngine::Core::clear_back_buffer(float clear_color[4]) const {
 	context_ptr_->ClearRenderTargetView(render_target_ptr_.Get(), clear_color);
+	context_ptr_->ClearDepthStencilView(depth_view_ptr_.Get(),D3D11_CLEAR_DEPTH,1.0f,0u);
 }
 
